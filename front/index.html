@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYS.TERMINAL // AI_COVER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: rgba(139, 92, 246, 0.05); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(168, 85, 247, 0.4); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(168, 85, 247, 0.8); }
+        .bg-tech-grid {
+            background-color: #050505;
+            background-image: linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px; background-position: center center;
+        }
+        .hud-panel {
+            background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(8px);
+            border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: inset 0 0 30px rgba(139, 92, 246, 0.05); position: relative;
+        }
+        .hud-panel::before, .hud-panel::after {
+            content: ''; position: absolute; width: 20px; height: 20px; border: 2px solid #9333ea;
+        }
+        .hud-panel::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+        .hud-panel::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+        .scanline {
+            width: 100%; height: 2px; background: rgba(168, 85, 247, 0.4);
+            position: absolute; top: 0; left: 0; animation: scan 4s linear infinite; pointer-events: none;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.8);
+        }
+        @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+        
+        /* Estilizando o menu dropdown no estilo hacker */
+        select.tech-input {
+            background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.3); appearance: none;
+            cursor: pointer;
+        }
+        select.tech-input:focus { border-color: #a855f7; box-shadow: 0 0 15px rgba(168, 85, 247, 0.2) inset; outline: none; }
+        select.tech-input option { background: #0a0a0f; color: #d4d4d8; }
+    </style>
+</head>
+<body class="bg-tech-grid text-zinc-300 min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 font-mono relative">
+    <div id="loading-overlay" class="fixed inset-0 bg-[#050505] z-50 flex flex-col items-center justify-center hidden transition-opacity duration-700">
+        <div class="scanline"></div>
+        <div class="border border-purple-500/30 bg-purple-900/10 p-10 flex flex-col items-center shadow-[0_0_50px_rgba(168,85,247,0.1)]">
+            <div class="relative w-16 h-16 mb-6">
+                <div class="absolute inset-0 border-4 border-purple-900/30 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                <div class="absolute inset-0 border-4 border-purple-400/50 border-b-transparent rounded-full animate-[spin_1.5s_linear_infinite_reverse]"></div>
+            </div>
+            
+            <h2 class="text-purple-400 text-xl font-bold tracking-widest uppercase mb-2 animate-pulse drop-shadow-md">
+                ESTABELECENDO CONEXÃO...
+            </h2>
+            <p id="loading-text" class="text-zinc-500 text-xs tracking-wider font-mono">
+                > OAUTH_2.0_HANDSHAKE_IN_PROGRESS
+            </p>
+        </div>
+    </div>
+
+    <div class="w-full max-w-3xl mb-2 flex flex-col sm:flex-row sm:justify-between sm:items-end text-[10px] sm:text-xs text-purple-400 tracking-widest opacity-70">
+        <div>
+            <p>> SYNC_SERVER: 127.0.0.1:8000</p>
+            <p>> TARGET_USER: <span id="res-dono" class="text-purple-300">AWAITING_SYNC</span> 
+                <button id="btn-logout" class="hidden ml-2 text-red-500 hover:text-red-400 text-[10px] border border-red-500/30 px-1 bg-red-900/20 active:scale-95 transition-all">
+                    [X] DESCONECTAR
+                </button>
+            </p>
+            <p>> STATUS: <span id="sys-status" class="text-green-400">ONLINE</span></p>
+        </div>
+        <div class="hidden sm:block text-right opacity-50"><p>V.2.0 // OAUTH_SECURE</p></div>
+    </div>
+
+    <div class="w-full max-w-3xl hud-panel p-6 sm:p-10">
+        <div class="scanline"></div>
+        
+        <div class="border-b border-purple-500/30 pb-4 mb-8 flex justify-between items-end">
+            <div>
+                <h1 class="text-3xl font-bold text-white tracking-widest uppercase shadow-purple-500/50 drop-shadow-md">
+                    DATA<span class="text-purple-500">.VISION</span>
+                </h1>
+                <p class="text-xs text-purple-300 mt-2 tracking-widest uppercase">Pipeline de Extração Visual</p>
+            </div>
+            <div class="hidden sm:block text-right">
+                <span class="inline-block w-2 h-2 bg-purple-500 rounded-full animate-pulse mr-2"></span>
+                <span class="text-xs text-purple-400">AWAITING_INPUT</span>
+            </div>
+        </div>
+
+        <div id="auth-area" class="flex flex-col gap-4 mb-10 text-center py-6">
+            <button id="btn-login" class="mx-auto w-full md:w-auto bg-green-600 hover:bg-green-500 text-white text-sm font-bold py-4 px-12 uppercase tracking-widest transition-all hover:shadow-[0_0_20px_rgba(22,163,74,0.5)] active:scale-95">
+                > CONECTAR BASE DE DADOS DO SPOTIFY
+            </button>
+            <p class="text-xs text-purple-400/60 uppercase">OAUTH 2.0 PROTOCOL_</p>
+        </div>
+
+         <div id="selection-area" class="hidden flex-col mb-10">
+            <div class="flex justify-between items-center mb-4">
+                <p class="text-xs text-purple-400 uppercase tracking-widest">> SELECIONE O ALVO PARA EXTRAÇÃO:</p>
+                <span id="alvo-status" class="text-[10px] text-zinc-500 bg-purple-900/20 px-2 py-1 border border-purple-500/30">AGUARDANDO COMANDO</span>
+            </div>
+            
+            <div id="playlist-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[400px] overflow-y-auto pr-2 custom-scroll">
+                </div>
+        </div>
+
+        <div id="resultado-area" class="hidden border border-purple-500/20 bg-black/40 p-6 relative">
+            <div class="absolute top-0 right-0 bg-purple-600 text-white text-[10px] px-2 py-1 font-bold">SYS.OUTPUT</div>
+            
+            <div class="flex justify-between items-center mb-4 mt-2">
+                <h2 class="text-xl font-bold text-white uppercase" id="res-titulo">...</h2>
+                <span class="text-xs text-purple-300 border border-purple-500/50 px-2 py-1" id="res-total">VOL: 0 TRACKS</span>
+            </div>
+            
+            <div id="box-analise" class="mb-6 mt-4 p-4 border border-purple-500/20 bg-purple-900/10">
+                <div class="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <p class="text-purple-500/60 uppercase tracking-widest mb-1">> GÊNERO DETECTADO</p>
+                        <p id="res-genero" class="text-zinc-200 font-bold uppercase tracking-wider">---</p>
+                    </div>
+                    <div>
+                        <p class="text-purple-500/60 uppercase tracking-widest mb-1">> FREQUÊNCIA PSICOLÓGICA</p>
+                        <p id="res-mood" class="text-zinc-200 font-bold uppercase tracking-wider">---</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-purple-500/60 uppercase tracking-widest mb-1">> FILTRO FOTOGRÁFICO APLICADO</p>
+                        <p id="res-cor" class="text-zinc-200 font-bold uppercase tracking-wider">---</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full h-px bg-gradient-to-r from-purple-500/50 to-transparent mb-6"></div>
+            
+            <p class="text-xs text-purple-400 mb-3 uppercase tracking-widest">> VETORES VISUAIS GERADOS:</p>
+            <div id="res-keywords" class="flex flex-wrap gap-3"></div>
+            
+            <div class="w-full h-px bg-gradient-to-r from-purple-500/50 to-transparent my-6"></div>
+                
+            <p class="text-xs text-purple-400 mb-4 uppercase tracking-widest">> IMAGENS DE ALTA RESOLUÇÃO CAPTURADAS:</p>
+            
+            <div id="res-imagens" class="grid grid-cols-2 sm:grid-cols-3 gap-4"></div>
+            
+            <div id="box-refresh" class="hidden mt-8 text-center">
+                <button id="btn-mais-fotos" class="bg-purple-900/40 hover:bg-purple-700 text-purple-300 border border-purple-500/50 text-xs px-6 py-3 uppercase tracking-widest transition-all hover:shadow-[0_0_15px_rgba(168,85,247,0.4)] active:scale-95">
+                    > SOLICITAR NOVOS VETORES (PAG <span id="pag-atual">1</span>)
+                </button>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+        let playlistAlvoId = "";
+        let termoAtual = "";
+        let paginaAtual = 1;
+
+        // Verifica se usuário acabou de voltar do Spotify com código
+      window.onload = async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const authCode = urlParams.get('code');
+
+            if (authCode) {
+                // 1. ATIVA A TELA DE CARREGAMENTO
+                const overlay = document.getElementById('loading-overlay');
+                const loadingText = document.getElementById('loading-text');
+                overlay.classList.remove('hidden');
+
+                // 2. Efeito visual de logs no terminal
+                setTimeout(() => loadingText.innerText = "> TROCANDO CHAVES CRIPTOGRÁFICAS...", 800);
+                setTimeout(() => loadingText.innerText = "> VALIDANDO TOKEN DE ACESSO...", 1600);
+                setTimeout(() => loadingText.innerText = "> ACESSANDO BIBLIOTECA DO USUÁRIO...", 2400);
+
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/api/auth/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: authCode })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.access_token) {
+                        localStorage.setItem('spotify_token', data.access_token);
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        
+                        // Busca as playlists por baixo dos panos
+                        await carregarPlaylists();
+
+                        // 3. DESATIVA A TELA SUAVEMENTE DEPOIS DE TUDO PRONTO
+                        setTimeout(() => {
+                            loadingText.innerText = "> ACESSO CONCEDIDO_";
+                            loadingText.classList.replace('text-zinc-500', 'text-green-400');
+                            
+                            setTimeout(() => {
+                                overlay.classList.add('opacity-0'); // Inicia o fade out
+                                setTimeout(() => overlay.classList.add('hidden'), 700); // Remove do código após sumir
+                            }, 800);
+                        }, 2800); // Dá um tempinho extra para a animação ficar bonita
+                    }
+                } catch (error) {
+                    loadingText.innerText = "SYS.ERROR: FALHA NA AUTENTICAÇÃO";
+                    loadingText.classList.replace('text-zinc-500', 'text-red-500');
+                }
+            } else if (localStorage.getItem('spotify_token')) {
+                // Se já tiver logado no passado, carrega direto as playlists
+                carregarPlaylists();
+            }
+        };
+
+        // Função de Redirecionamento para o Login do Spotify
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/url');
+                const data = await response.json();
+                window.location.href = data.url; // Manda pro painel do Spotify
+            } catch (error) {
+                alert('SYS.ERROR: O SERVIDOR BACKEND ESTÁ OFFLINE.');
+            }
+        });
+
+        // Função para Buscar e Listar as Playlists do Usuário Logado
+async function carregarPlaylists() {
+            document.getElementById('auth-area').classList.add('hidden');
+            document.getElementById('selection-area').classList.replace('hidden', 'flex');
+            document.getElementById('sys-status').innerText = "SECURE_SYNC";
+            document.getElementById('btn-logout').classList.remove('hidden');
+            
+            try {
+                const token = localStorage.getItem('spotify_token');
+                const response = await fetch('http://127.0.0.1:8000/api/playlists', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.status === 401) { 
+                    localStorage.removeItem('spotify_token');
+                    location.reload();
+                    return;
+                }
+
+                const data = await response.json();
+                const gridEl = document.getElementById('playlist-grid');
+                gridEl.innerHTML = ''; 
+                
+                data.playlists.forEach(pl => {
+                    // Cria a estrutura do Card
+                    const card = document.createElement('div');
+                    card.className = 'border border-purple-500/30 bg-purple-900/10 hover:bg-purple-900/40 hover:border-purple-400 cursor-pointer transition-all hover:scale-[1.02] p-3 flex flex-col group shadow-lg';
+                    
+                    // Lógica da Capa: Mostra a original, ou um texto tecnológico se não houver capa
+                    let capaHtml = '';
+                    if (pl.imagem) {
+                        // Direciona a busca para o nosso servidor local que libera o CORS
+                        capaHtml = `<img src="http://127.0.0.1:8000/api/image-proxy?url=${pl.imagem}" class="w-full aspect-square object-cover mb-3 opacity-70 group-hover:opacity-100 transition-opacity">`;
+                    } else {
+                        capaHtml = `<div class="w-full aspect-square flex flex-col items-center justify-center border border-dashed border-purple-500/30 mb-3 bg-black/50 text-purple-500/50">
+                                        <span class="text-2xl mb-1">?</span>
+                                        <span class="text-[8px] uppercase tracking-widest">NO_COVER_DATA</span>
+                                    </div>`;
+                    }
+
+                    card.innerHTML = `
+                        ${capaHtml}
+                        <h3 class="text-xs font-bold text-white truncate w-full" title="${pl.nome}">${pl.nome}</h3>
+                        <p class="text-[9px] text-purple-400 truncate w-full mt-1">OWNER: ${pl.dono}</p>
+                    `;
+                    
+                    // Quando clicar, aciona a IA na mesma hora!
+                    card.onclick = () => dispararVarredura(pl.id, card);
+                    gridEl.appendChild(card);
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+       function renderizarImagens(urls) {
+            const imagensEl = document.getElementById('res-imagens');
+            imagensEl.innerHTML = ''; 
+            
+            if (urls && urls.length > 0) {
+                urls.forEach(url_foto => {
+                    // Container da foto
+                    const box = document.createElement('div');
+                    box.className = 'relative group cursor-pointer overflow-hidden border border-purple-500/30 hover:border-purple-500 shadow-md';
+                    
+                    // A foto
+                    const img = document.createElement('img');
+                    img.src = url_foto;
+                    // Removido o opacity-0 para a foto aparecer imediatamente
+                    img.className = 'w-full aspect-square object-cover transition-all duration-500 group-hover:scale-110 group-hover:blur-[2px]';
+                    
+                    // A película escura com o botão de Injetar
+                    const overlay = document.createElement('div');
+                    overlay.className = 'absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300';
+                    
+                    const btnApply = document.createElement('button');
+                    btnApply.className = 'bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-3 px-6 uppercase tracking-widest shadow-[0_0_15px_rgba(22,163,74,0.5)] active:scale-95 transition-all';
+                    btnApply.innerText = '> INJETAR CAPA NO SPOTIFY';
+                    
+                    btnApply.onclick = (e) => {
+                        e.stopPropagation(); // Evita clicar em outra coisa
+                        injetarCapa(url_foto, btnApply);
+                    };
+
+                    const btnVer = document.createElement('button');
+                    btnVer.className = 'mt-3 text-purple-300 hover:text-white text-[10px] tracking-widest uppercase';
+                    btnVer.innerText = '[ VER EM ALTA RESOLUÇÃO ]';
+                    btnVer.onclick = (e) => { e.stopPropagation(); window.open(url_foto, '_blank'); };
+                    
+                    overlay.appendChild(btnApply);
+                    overlay.appendChild(btnVer);
+                    box.appendChild(img);
+                    box.appendChild(overlay);
+                    imagensEl.appendChild(box);
+                });
+            } else {
+                imagensEl.innerHTML = '<p class="text-xs text-zinc-600 col-span-3">NENHUMA IMAGEM RETORNADA_</p>';
+            }
+        }
+
+        // --- BOTÃO GERAR ---
+       // --- FUNÇÃO DE EXTRAÇÃO AUTOMÁTICA ---
+        async function dispararVarredura(playlistId, cardElement) {
+            playlistAlvoId = playlistId; // Guarda o ID para usarmos na hora de trocar a capa
+            const resultArea = document.getElementById('resultado-area');
+            const statusEl = document.getElementById('alvo-status');
+
+            // Feedback Visual de que o clique funcionou
+            statusEl.innerText = "PROCESSANDO ALVO...";
+            statusEl.classList.replace('text-zinc-500', 'text-yellow-400');
+            cardElement.classList.add('animate-pulse', 'border-yellow-400');
+
+            try {
+                const token = localStorage.getItem('spotify_token');
+                const response = await fetch('http://127.0.0.1:8000/api/playlist/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ playlist_id: playlistId })
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('spotify_token');
+                    location.reload();
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Preenche os dados no HUD (mesmo código que você já tinha)
+                document.getElementById('res-titulo').innerText = data.titulo;
+                document.getElementById('res-total').innerText = `VOL: ${data.total_musicas} TRACKS`;
+                document.getElementById('res-dono').innerText = data.dono.toUpperCase();
+                
+                document.getElementById('res-genero').innerText = data.analise_profunda.genero_predominante || "UNKNOWN";
+                document.getElementById('res-mood').innerText = data.analise_profunda.energia_psicologica || "UNKNOWN";
+                document.getElementById('res-cor').innerText = data.analise_profunda.cor_filtro_unsplash || "NONE";
+
+                const keywordsEl = document.getElementById('res-keywords');
+                keywordsEl.innerHTML = '';
+                const arrayKeywords = data.analise_profunda.keywords_visuais || [];
+                arrayKeywords.forEach(keyword => {
+                    const span = document.createElement('span');
+                    span.className = 'border border-purple-500/40 bg-purple-900/20 text-purple-200 px-3 py-1.5 text-xs tracking-wider uppercase';
+                    span.innerText = keyword;
+                    keywordsEl.appendChild(span);
+                });
+
+                termoAtual = arrayKeywords[0] || "music";
+                paginaAtual = 1;
+                document.getElementById('btn-mais-fotos').innerText = `> SOLICITAR NOVOS VETORES (PAG 1)`;
+
+                renderizarImagens(data.capas_sugeridas);
+
+                // Mostra o resultado e rola a tela suavemente para baixo
+                resultArea.classList.remove('hidden');
+                document.getElementById('box-refresh').classList.remove('hidden');
+                resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                statusEl.innerText = "EXTRAÇÃO CONCLUÍDA";
+                statusEl.classList.replace('text-yellow-400', 'text-green-400');
+            } catch (error) {
+                alert(`SYS.ERROR: FALHA NA EXTRAÇÃO.`);
+                statusEl.innerText = "SYS.FAIL";
+                statusEl.classList.replace('text-yellow-400', 'text-red-500');
+            } finally {
+                cardElement.classList.remove('animate-pulse', 'border-yellow-400');
+            }
+        }
+
+        // --- BOTÃO RECARREGAR FOTOS ---
+        document.getElementById('btn-mais-fotos').addEventListener('click', async () => {
+            const btnMais = document.getElementById('btn-mais-fotos');
+            paginaAtual++; 
+            btnMais.innerText = '> SOLICITANDO...';
+            btnMais.disabled = true;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/capas', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ keyword: termoAtual, pagina: paginaAtual })
+                });
+                const data = await response.json();
+                renderizarImagens(data.capas_sugeridas);
+            } catch (error) {
+                paginaAtual--; 
+            } finally {
+                btnMais.innerText = `> SOLICITAR NOVOS VETORES (PAG ${paginaAtual})`;
+                btnMais.disabled = false;
+            }
+        });
+        // --- BOTÃO DE LOGOUT ---
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            localStorage.removeItem('spotify_token'); // Destrói a chave do navegador
+            location.reload(); // Dá um F5 automático para voltar pra tela inicial
+        });
+
+        // --- FUNÇÃO DE INJEÇÃO NA API DO SPOTIFY ---
+        async function injetarCapa(urlImagem, btnElement) {
+            if (!playlistAlvoId) return alert('SYS.ERROR: ALVO NÃO DEFINIDO.');
+            
+            const textoOriginal = btnElement.innerText;
+            btnElement.innerText = '> CRIPTOGRAFANDO...';
+            btnElement.disabled = true;
+            btnElement.classList.replace('bg-green-600', 'bg-yellow-600');
+
+            try {
+                const token = localStorage.getItem('spotify_token');
+                const response = await fetch('http://127.0.0.1:8000/api/playlist/cover', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ playlist_id: playlistAlvoId, image_url: urlImagem })
+                });
+
+                if (!response.ok) throw new Error('Falha na injeção.');
+
+                btnElement.innerText = 'SUCESSO_';
+                btnElement.classList.replace('bg-yellow-600', 'bg-blue-600');
+                
+                // Recarrega as playlists no fundo para atualizar a capa no menu
+                setTimeout(() => carregarPlaylists(), 2000); 
+
+            } catch (error) {
+                alert('SYS.ERROR: FALHA AO ENVIAR DADOS PARA O SPOTIFY.');
+                btnElement.innerText = textoOriginal;
+                btnElement.classList.replace('bg-yellow-600', 'bg-green-600');
+            } finally {
+                btnElement.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
