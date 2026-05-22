@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Header, Response
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
@@ -36,7 +37,7 @@ except Exception as e:
 sp_oauth = SpotifyOAuth(
     client_id=os.getenv("SPOTIPY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-    redirect_uri="http://127.0.0.1:5500/front/index.html", 
+    redirect_uri="https://spotify-icon-playlist.onrender.com/",
     scope="playlist-read-private playlist-read-collaborative ugc-image-upload playlist-modify-public playlist-modify-private",
     cache_handler=MemoryCacheHandler(),
     show_dialog=True
@@ -52,6 +53,13 @@ class PlaylistRequest(BaseModel):
 class CapasRequest(BaseModel):
     keyword: str
     pagina: int = 1
+
+# NOVA ROTA: O Salão Principal (Front-end)
+@app.get("/")
+def painel_visual():
+    # Se o seu index.html estiver dentro da pasta 'front', use "front/index.html"
+    # Se ele estiver solto na raiz do projeto, use apenas "index.html"
+    return FileResponse("index.html")
 
 # ROTA 1: Pede a URL de Autorização oficial do Spotify
 @app.get("/api/auth/url")
