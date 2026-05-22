@@ -54,6 +54,10 @@ class CapasRequest(BaseModel):
     keyword: str
     pagina: int = 1
 
+# NOVA ROTA: Despertador (Mantém o servidor do Render acordado)
+@app.get("/api/ping")
+def ping_server():
+    return {"status": "online", "message": "O pai ta on!"}
 # NOVA ROTA: O Salão Principal (Front-end)
 @app.get("/")
 def painel_visual():
