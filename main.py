@@ -57,9 +57,8 @@ class CapasRequest(BaseModel):
 # NOVA ROTA: O Salão Principal (Front-end)
 @app.get("/")
 def painel_visual():
-    # Se o seu index.html estiver dentro da pasta 'front', use "front/index.html"
-    # Se ele estiver solto na raiz do projeto, use apenas "index.html"
-    return FileResponse("index.html")
+    # Agora o Python sabe que precisa abrir a porta da pasta 'front' para achar o visual!
+    return FileResponse("front/index.html")
 
 # ROTA 1: Pede a URL de Autorização oficial do Spotify
 @app.get("/api/auth/url")
